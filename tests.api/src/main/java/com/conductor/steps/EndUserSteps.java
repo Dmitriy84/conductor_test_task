@@ -102,6 +102,9 @@ public class EndUserSteps extends ScenarioSteps {
 				case "minutes":
 					d = d.minusMinutes(value);
 					break;
+				default:
+					throw new UnsupportedOperationException(
+							"cannot parse period: " + pair[1]);
 				}
 			}
 		} catch (final Exception e) {
