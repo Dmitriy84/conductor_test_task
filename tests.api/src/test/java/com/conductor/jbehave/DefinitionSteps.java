@@ -37,35 +37,55 @@ public class DefinitionSteps {
 	}
 
 	@Then("print counter of characters with format '$format'")
-	public void printResults(final String format) {
-		try {
-			final JSONObject jsonObject = (JSONObject) _event.get(_root);
-			try {
-				final String field = jsonObject.get(_field).toString();
-				Assert.assertFalse("empty '" + _field + "' field",
-						StringUtils.isBlank(field));
-				log.info(_field + " = " + field);
-				endUser.print(
-						new TreeMap<String, Long>(endUser.collectChars(field)),
-						format);
-			} catch (final JSONException e) {
-				Assert.fail("node '" + _field + "' was not found");
-			}
-		} catch (final JSONException root) {
-			Assert.fail("unexpected root element '" + _root + "'");
-		}
+	public void printResults(final String format) throws Exception {
+		endUser.print(new TreeMap<String, Long>(_collectChars(_event, _field)),
+				format);
 	}
 
 	@Then(value = "print counter of characters with format '$format' from '$from' to '$to'", priority = 1)
 	public void printResultsFromTo(final String format, final String from,
-			final String to) {
-		
-		System.out.println();
+			final String to) throws Exception {
+		final TreeMap<String, Long> map = new TreeMap<String, Long>();
+		long to_mills = endUser.parseDate(to), collected = 0;
+		JSONObject event = null;
+		event = endUser.getCurrent(_url, endUser.parseDate(from));
+		while (true) {
+			collected = Long.parseLong(_getFieldValue(event, "timeStamp"));
+			if (collected > to_mills)
+				break;
+			endUser.joinMaps(map, _collectChars(event, "outputValue"));
+			event = endUser.getNext(_url, collected);
+			endUser.print(map, format);
+		}
 	}
 
 	@Steps
 	EndUserSteps endUser;
 	private final Logger log = Logger.getLogger(getClass());
-	private String _url, _root, _field;
+	private static String _url, _root, _field;
 	private JSONObject _event;
+
+	private TreeMap<String, Long> _collectChars(final JSONObject obj,
+			final String field) throws Exception {
+		return new TreeMap<String, Long>(endUser.collectChars(_getFieldValue(
+				obj, field)));
+	}
+
+	private String _getFieldValue(final JSONObject obj, final String field) {
+		try {
+			final JSONObject root = (JSONObject) obj.get(_root);
+			try {
+				final String value = root.get(field).toString();
+				Assert.assertFalse("empty '" + field + "' field",
+						StringUtils.isBlank(value));
+				log.info(field + " = " + value);
+				return value;
+			} catch (final JSONException e) {
+				Assert.fail("node '" + field + "' was not found");
+			}
+		} catch (final JSONException e) {
+			Assert.fail("unexpected root element '" + _root + "'");
+		}
+		return "";
+	}
 }

@@ -10,6 +10,9 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -17,15 +20,45 @@ import net.thucydides.core.annotations.Step;
 import net.thucydides.core.steps.ScenarioSteps;
 
 import org.apache.log4j.Logger;
+import org.joda.time.DateTime;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.XML;
+import org.junit.Assert;
 
 public class EndUserSteps extends ScenarioSteps {
 	@Step
 	public JSONObject getLast(final String url) throws MalformedURLException,
 			UnsupportedEncodingException, IOException, JSONException, Exception {
 		return _send(url + "/last");
+	}
+
+	@Step
+	public JSONObject getCurrent(final String url, final long timestamp)
+			throws MalformedURLException, UnsupportedEncodingException,
+			IOException, JSONException, Exception {
+		return _send(url + "/" + timestamp);
+	}
+
+	@Step
+	public JSONObject startChain(final String url, final long timestamp)
+			throws MalformedURLException, UnsupportedEncodingException,
+			IOException, JSONException, Exception {
+		return _send(url + "/start-chain/" + timestamp);
+	}
+
+	@Step
+	public JSONObject getNext(final String url, final long timestamp)
+			throws MalformedURLException, UnsupportedEncodingException,
+			IOException, JSONException, Exception {
+		return _send(url + "/next/" + timestamp);
+	}
+
+	@Step
+	public JSONObject getPrevious(final String url, final long timestamp)
+			throws MalformedURLException, UnsupportedEncodingException,
+			IOException, JSONException, Exception {
+		return _send(url + "/previous/" + timestamp);
 	}
 
 	@Step
@@ -40,6 +73,49 @@ public class EndUserSteps extends ScenarioSteps {
 			log.info(format.replace("{character}", k).replace("{counter}",
 					v.toString()));
 		});
+	}
+
+	@Step
+	public long parseDate(final String date) {
+		final Matcher m = PERIOD_PATTERN.matcher(date);
+		DateTime d = new DateTime();
+		try {
+			while (m.find()) {
+				final String group = m.group(0);
+				final String[] pair = group.split(" ");
+				final int value = Integer.parseInt(pair[0]);
+				log.info("Found date period: " + group);
+				switch (pair[1].toLowerCase()) {
+				case "month":
+				case "months":
+					d = d.minusMonths(value);
+					break;
+				case "day":
+				case "days":
+					d = d.minusDays(value);
+					break;
+				case "hour":
+				case "hours":
+					d = d.minusHours(value);
+					break;
+				case "minute":
+				case "minutes":
+					d = d.minusMinutes(value);
+					break;
+				}
+			}
+		} catch (final Exception e) {
+			Assert.fail("can not parse date '" + date + "'");
+		}
+		log.info("... created date: " + d);
+		return d.getMillis() / 1000;
+	}
+
+	public void joinMaps(final TreeMap<String, Long> map,
+			final TreeMap<String, Long> collected) {
+		collected.entrySet().forEach(
+				e -> map.put(e.getKey(),
+						map.getOrDefault(e.getKey(), 0L) + e.getValue()));
 	}
 
 	private JSONObject _send(final String url) throws IOException,
@@ -65,4 +141,6 @@ public class EndUserSteps extends ScenarioSteps {
 
 	private final Logger log = Logger.getLogger(getClass());
 	private static final long serialVersionUID = 4413415143679879733L;
+	private static final Pattern PERIOD_PATTERN = Pattern
+			.compile("[\\d]+ [a-zA-Z]+ ");
 }
