@@ -69,10 +69,8 @@ public class EndUserSteps extends ScenarioSteps {
 
 	@Step
 	public void print(final Map<String, Long> map, final String format) {
-		map.forEach((k, v) -> {
-			log.info(format.replace("{character}", k).replace("{counter}",
-					v.toString()));
-		});
+		map.forEach((k, v) -> log.info(format.replace("{character}", k)
+				.replace("{counter}", v.toString())));
 	}
 
 	@Step

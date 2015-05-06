@@ -38,21 +38,20 @@ public class DefinitionSteps {
 
 	@Then("print counter of characters with format '$format'")
 	public void printResults(final String format) throws Exception {
-		endUser.print(new TreeMap<String, Long>(_collectChars(_event, _field)),
-				format);
+		endUser.print(_collectChars(_event), format);
 	}
 
 	@Then(value = "print counter of characters with format '$format' from '$from' to '$to'", priority = 1)
 	public void printResultsFromTo(final String format, final String from,
 			final String to) throws Exception {
-		final TreeMap<String, Long> map = new TreeMap<String, Long>();
+		final TreeMap<String, Long> map = new TreeMap<>();
 		long to_mills = endUser.parseDate(to), timeStamp = 0;
 		JSONObject event = endUser.getCurrent(_url, endUser.parseDate(from));
 		while (true) {
 			timeStamp = Long.parseLong(_getFieldValue(event, "timeStamp"));
 			if (timeStamp > to_mills)
 				break;
-			endUser.joinMaps(map, _collectChars(event, "outputValue"));
+			endUser.joinMaps(map, _collectChars(event));
 			event = endUser.getNext(_url, timeStamp);
 			endUser.print(map, format);
 		}
@@ -62,12 +61,11 @@ public class DefinitionSteps {
 	EndUserSteps endUser;
 	private final Logger log = Logger.getLogger(getClass());
 	private static String _url, _root, _field;
-	private JSONObject _event;
+	private static JSONObject _event;
 
-	private TreeMap<String, Long> _collectChars(final JSONObject obj,
-			final String field) throws Exception {
-		return new TreeMap<String, Long>(endUser.collectChars(_getFieldValue(
-				obj, field)));
+	private TreeMap<String, Long> _collectChars(final JSONObject obj)
+			throws Exception {
+		return new TreeMap<>(endUser.collectChars(_getFieldValue(obj, _field)));
 	}
 
 	private String _getFieldValue(final JSONObject obj, final String field) {
