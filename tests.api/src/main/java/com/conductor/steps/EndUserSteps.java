@@ -108,7 +108,8 @@ public class EndUserSteps extends ScenarioSteps {
 				}
 			}
 		} catch (final Exception e) {
-			Assert.fail("can not parse date '" + date + "'");
+			Assert.fail("can not parse date '" + date + "'/nDetails: "
+					+ e.getMessage());
 		}
 		log.info("... created date: " + d);
 		return d.getMillis() / 1000;

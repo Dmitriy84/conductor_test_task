@@ -46,15 +46,14 @@ public class DefinitionSteps {
 	public void printResultsFromTo(final String format, final String from,
 			final String to) throws Exception {
 		final TreeMap<String, Long> map = new TreeMap<String, Long>();
-		long to_mills = endUser.parseDate(to), collected = 0;
-		JSONObject event = null;
-		event = endUser.getCurrent(_url, endUser.parseDate(from));
+		long to_mills = endUser.parseDate(to), timeStamp = 0;
+		JSONObject event = endUser.getCurrent(_url, endUser.parseDate(from));
 		while (true) {
-			collected = Long.parseLong(_getFieldValue(event, "timeStamp"));
-			if (collected > to_mills)
+			timeStamp = Long.parseLong(_getFieldValue(event, "timeStamp"));
+			if (timeStamp > to_mills)
 				break;
 			endUser.joinMaps(map, _collectChars(event, "outputValue"));
-			event = endUser.getNext(_url, collected);
+			event = endUser.getNext(_url, timeStamp);
 			endUser.print(map, format);
 		}
 	}
