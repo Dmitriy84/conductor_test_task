@@ -1,6 +1,6 @@
 Required:
 	- Maven 3.2.5
-	- Java 1.8.0_25
+	- Java 1.8
 
 Run:
 mvn verify
