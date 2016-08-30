@@ -8,7 +8,6 @@ import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
@@ -19,6 +18,7 @@ import java.util.stream.Stream;
 import net.thucydides.core.annotations.Step;
 import net.thucydides.core.steps.ScenarioSteps;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.joda.time.DateTime;
 import org.json.JSONException;
@@ -62,9 +62,19 @@ public class EndUserSteps extends ScenarioSteps {
 	}
 
 	@Step
-	public Map<String, Long> collectChars(final String field) {
-		return Arrays.stream(field.split("")).collect(
-				Collectors.groupingBy(c -> c, Collectors.counting()));
+	public TreeMap<String, Long> collectChars(final String field) {
+		if (StringUtils.isBlank(field))
+			return null;
+		Pattern p = Pattern.compile("[^A-F\\d]");
+		Matcher m = p.matcher(field);
+		if (m.find())
+			throw new UnsupportedOperationException("Unexpected character: "
+					+ m.group());
+		if (field.length() != 128)
+			throw new UnsupportedOperationException(
+					"Unexpected Output Value length: " + field.length());
+		return new TreeMap<>(Stream.of(field.split("")).collect(
+				Collectors.groupingBy(c -> c, Collectors.counting())));
 	}
 
 	@Step
@@ -77,8 +87,10 @@ public class EndUserSteps extends ScenarioSteps {
 	public long parseDate(final String date) {
 		final Matcher m = PERIOD_PATTERN.matcher(date);
 		DateTime d = new DateTime();
+		boolean flag = false;
 		try {
 			while (m.find()) {
+				flag = true;
 				final String group = m.group(0);
 				final String[] pair = group.split(" ");
 				final int value = Integer.parseInt(pair[0]);
@@ -109,6 +121,7 @@ public class EndUserSteps extends ScenarioSteps {
 			Assert.fail("can not parse date '" + date + "'/nDetails: "
 					+ e.getMessage());
 		}
+		Assert.assertTrue("cannot parse date: " + date, flag);
 		log.info("... created date: " + d);
 		return d.getMillis() / 1000;
 	}
@@ -125,19 +138,23 @@ public class EndUserSteps extends ScenarioSteps {
 			Exception {
 		final HttpURLConnection conn = (HttpURLConnection) new URL(url)
 				.openConnection();
-		log.info("calling URL: " + url);
-		final int status = conn.getResponseCode();
-		try (final InputStream istream = status == 200 ? conn.getInputStream()
-				: conn.getErrorStream()) {
-			try (final Stream<String> lines = new BufferedReader(
-					new InputStreamReader(istream, "UTF-8")).lines()) {
-				final String xml = lines.collect(Collectors.joining());
-				if (status != 200)
-					throw new Exception("Response status: " + status
-							+ "/nDetails: " + xml);
-				log.info("Response body: " + xml);
-				return XML.toJSONObject(xml);
+		try {
+			log.info("calling URL: " + url);
+			final int status = conn.getResponseCode();
+			try (final InputStream istream = status == 200 ? conn
+					.getInputStream() : conn.getErrorStream()) {
+				try (final Stream<String> lines = new BufferedReader(
+						new InputStreamReader(istream, "UTF-8")).lines()) {
+					final String xml = lines.collect(Collectors.joining());
+					if (status != 200)
+						throw new Exception("Response status: " + status
+								+ "/nDetails: " + xml);
+					log.info("Response body: " + xml);
+					return XML.toJSONObject(xml);
+				}
 			}
+		} finally {
+			conn.disconnect();
 		}
 	}
 
